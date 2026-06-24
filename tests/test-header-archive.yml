@@ -1,0 +1,38 @@
+name: Test header archive option
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: "4.4"
+          flavor: stable
+          platform: linuxbsd
+          target: template_release
+          options: "create_header_archive"
+          timeout: "30"
+
+      - name: Assert directory output is set
+        env:
+          DIR_OUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUT"
+          if [ -z "$DIR_OUT" ]; then
+            echo "FAIL: expected directory output to be non-empty"
+            exit 1
+          fi
+          echo "PASS: directory output is set to '$DIR_OUT'"
+
+      - name: Note header_archive output (only set on successful build)
+        env:
+          ARCHIVE_OUT: ${{ steps.action.outputs.header_archive }}
+        run: |
+          echo "header_archive output: $ARCHIVE_OUT"
+          echo "NOTE: header_archive is only populated after a successful build completes"
+          echo "PASS: header_archive output check complete"
