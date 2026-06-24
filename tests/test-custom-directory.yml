@@ -1,0 +1,36 @@
+name: Test custom directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom build directory
+        run: mkdir -p /tmp/godot-build-test
+
+      - id: action
+        uses: .
+        with:
+          version: "4.4"
+          platform: linuxbsd
+          target: editor
+          directory: /tmp/godot-build-test
+          timeout: "30"
+        continue-on-error: true
+
+      - name: Assert directory output matches custom directory
+        env:
+          DIR_OUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUT"
+          if [ -z "$DIR_OUT" ]; then
+            echo "FAIL: expected directory output to be non-empty"
+            exit 1
+          fi
+          if [ "$DIR_OUT" != "/tmp/godot-build-test" ]; then
+            echo "FAIL: expected directory output to be '/tmp/godot-build-test', got '$DIR_OUT'"
+            exit 1
+          fi
+          echo "PASS: directory output matches custom directory"

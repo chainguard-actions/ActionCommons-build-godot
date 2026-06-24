@@ -1,0 +1,30 @@
+name: Test flavor and architecture inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          version: "4.4"
+          flavor: stable
+          platform: linuxbsd
+          target: template_release
+          architecture: x86_64
+          timeout: "30"
+        continue-on-error: true
+
+      - name: Assert directory output is set
+        env:
+          DIR_OUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUT"
+          if [ -z "$DIR_OUT" ]; then
+            echo "FAIL: expected directory output to be non-empty"
+            exit 1
+          fi
+          echo "PASS: directory output is set with flavor=stable and architecture=x86_64"
