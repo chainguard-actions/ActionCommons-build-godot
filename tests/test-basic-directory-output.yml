@@ -1,0 +1,44 @@
+name: Test basic directory output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          version: "4.4"
+          flavor: stable
+          platform: linuxbsd
+          target: template_release
+          timeout: "30"
+        continue-on-error: true
+
+      - name: Assert directory output is set
+        env:
+          ACTUAL: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "actual directory: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected directory output to be non-empty"
+            exit 1
+          fi
+          echo "PASS: directory output is set to '$ACTUAL'"
+
+      - name: Assert directory exists on filesystem
+        env:
+          DIR: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "checking directory: $DIR"
+          if [ -z "$DIR" ]; then
+            echo "SKIP: directory output was empty, skipping filesystem check"
+            exit 0
+          fi
+          if [ ! -d "$DIR" ]; then
+            echo "FAIL: directory '$DIR' does not exist on filesystem"
+            exit 1
+          fi
+          echo "PASS: directory exists"

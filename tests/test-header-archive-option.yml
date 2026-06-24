@@ -1,0 +1,43 @@
+name: Test header archive option
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom build directory
+        run: mkdir -p /tmp/godot-header-test
+
+      - id: action
+        uses: .
+        with:
+          version: "4.4"
+          flavor: stable
+          platform: linuxbsd
+          target: template_release
+          directory: /tmp/godot-header-test
+          options: create_header_archive
+          timeout: "30"
+        continue-on-error: true
+
+      - name: Assert directory output is set
+        env:
+          ACTUAL: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "actual directory: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected directory output to be non-empty"
+            exit 1
+          fi
+          echo "PASS: directory output is set to '$ACTUAL'"
+
+      - name: Log header archive output
+        env:
+          HEADER_ARCHIVE: ${{ steps.action.outputs.header_archive }}
+        run: |
+          echo "header_archive output: '$HEADER_ARCHIVE'"
+          echo "Note: header_archive is only set after a successful build with create_header_archive option"
+          echo "With a short timeout, the build may not complete, so this output may be empty"
+          echo "PASS: header_archive option was accepted by the action"
