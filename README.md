@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v1.0.1 | [`v1.0.1`](https://github.com/chainguard-actions/ActionCommons-build-godot/tree/v1.0.1) | [`5f85fea`](https://github.com/ActionCommons/build-godot/commit/5f85fea0a74208e1ade2304305fe3d21ac690b80) |
 | v1.1.0 | [`v1.1.0`](https://github.com/chainguard-actions/ActionCommons-build-godot/tree/v1.1.0) | [`43162e5`](https://github.com/ActionCommons/build-godot/commit/43162e5dd5d2ffa89ea4263bd2b5712f2bca86e0) |
 
 ## Privacy
