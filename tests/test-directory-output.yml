@@ -1,0 +1,32 @@
+name: Test directory output is set to custom path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom build directory
+        run: mkdir -p /tmp/godot-test-build
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          flavor: stable
+          platform: linuxbsd
+          target: editor
+          directory: /tmp/godot-test-build
+
+      - name: Assert directory output matches custom path
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          if [ "$DIR_OUTPUT" != "/tmp/godot-test-build" ]; then
+            echo "FAIL: expected directory output '/tmp/godot-test-build' but got '$DIR_OUTPUT'"
+            exit 1
+          fi
+          echo "PASS: directory output correctly set to custom path"

@@ -1,0 +1,38 @@
+name: Test valid architecture input passes validation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom build directory
+        run: mkdir -p /tmp/godot-arch-test
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          flavor: stable
+          platform: linuxbsd
+          target: editor
+          architecture: x86_64
+          directory: /tmp/godot-arch-test
+
+      - name: Assert validation passed for x86_64 architecture
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          # If validation passed, the directory output is set before the download step
+          if [ -z "$DIR_OUTPUT" ]; then
+            echo "FAIL: directory output not set — architecture validation may have failed"
+            exit 1
+          fi
+          if [ "$DIR_OUTPUT" != "/tmp/godot-arch-test" ]; then
+            echo "FAIL: expected directory '/tmp/godot-arch-test' but got '$DIR_OUTPUT'"
+            exit 1
+          fi
+          echo "PASS: x86_64 architecture passed validation"

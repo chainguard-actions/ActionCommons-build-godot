@@ -1,0 +1,37 @@
+name: Test multi-platform comma-separated input validation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom build directory
+        run: mkdir -p /tmp/godot-multi-platform
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          flavor: stable
+          platform: 'linuxbsd,windows'
+          target: 'editor,template_release'
+          directory: /tmp/godot-multi-platform
+
+      - name: Assert validation passed (directory output is set)
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          # If validation passed, the directory output is set before the download step
+          if [ -z "$DIR_OUTPUT" ]; then
+            echo "FAIL: directory output not set — validation may have failed before reaching output assignment"
+            exit 1
+          fi
+          if [ "$DIR_OUTPUT" != "/tmp/godot-multi-platform" ]; then
+            echo "FAIL: expected directory '/tmp/godot-multi-platform' but got '$DIR_OUTPUT'"
+            exit 1
+          fi
+          echo "PASS: multi-platform/target input passed validation, directory output is set"

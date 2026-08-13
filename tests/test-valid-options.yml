@@ -1,0 +1,38 @@
+name: Test valid options input passes validation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create custom build directory
+        run: mkdir -p /tmp/godot-options-test
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          flavor: stable
+          platform: linuxbsd
+          target: editor
+          options: 'debug_symbols=yes,optimize=speed'
+          directory: /tmp/godot-options-test
+
+      - name: Assert validation passed for valid options
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          # If validation passed, the directory output is set before the download step
+          if [ -z "$DIR_OUTPUT" ]; then
+            echo "FAIL: directory output not set — options validation may have failed"
+            exit 1
+          fi
+          if [ "$DIR_OUTPUT" != "/tmp/godot-options-test" ]; then
+            echo "FAIL: expected directory '/tmp/godot-options-test' but got '$DIR_OUTPUT'"
+            exit 1
+          fi
+          echo "PASS: valid options (debug_symbols=yes, optimize=speed) passed validation"
