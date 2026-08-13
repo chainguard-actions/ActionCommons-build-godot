@@ -1,0 +1,39 @@
+name: Test valid options are accepted
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create build directory
+        run: mkdir -p /tmp/godot-options-build
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          platform: linuxbsd
+          target: editor
+          architecture: x86_64
+          options: 'debug_symbols=yes,optimize=speed'
+          directory: /tmp/godot-options-build
+
+      - name: Assert directory output is set (valid options accepted)
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          # The action sets the directory output before attempting the download.
+          # If the output is set, all input validation (including options parsing) passed.
+          if [ -z "$DIR_OUTPUT" ]; then
+            echo "FAIL: directory output was not set — valid options may have been rejected"
+            exit 1
+          fi
+          if [ "$DIR_OUTPUT" != "/tmp/godot-options-build" ]; then
+            echo "FAIL: expected '/tmp/godot-options-build', got '$DIR_OUTPUT'"
+            exit 1
+          fi
+          echo "PASS: valid options (debug_symbols=yes, optimize=speed, arch=x86_64) were accepted"

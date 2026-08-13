@@ -1,0 +1,37 @@
+name: Test multiple platforms and targets (comma-separated)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create build directory
+        run: mkdir -p /tmp/godot-multi-build
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          platform: 'linuxbsd,windows'
+          target: 'editor,template_release'
+          directory: /tmp/godot-multi-build
+
+      - name: Assert directory output is set (validation passed before download)
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          # The action sets the directory output before attempting the download.
+          # If the output is set, input validation (multi-platform/target parsing) passed.
+          if [ -z "$DIR_OUTPUT" ]; then
+            echo "FAIL: directory output was not set — input validation may have failed"
+            exit 1
+          fi
+          if [ "$DIR_OUTPUT" != "/tmp/godot-multi-build" ]; then
+            echo "FAIL: expected '/tmp/godot-multi-build', got '$DIR_OUTPUT'"
+            exit 1
+          fi
+          echo "PASS: multi-platform/target inputs were accepted and directory output is set"
