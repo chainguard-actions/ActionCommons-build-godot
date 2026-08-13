@@ -1,0 +1,44 @@
+name: Test valid options parsing with multiple options
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # This test verifies that valid options are parsed without error.
+      # The action will proceed past validation and attempt to download Godot
+      # source; we use a very short timeout so the SCons build is killed
+      # immediately. The step is allowed to fail (network / build) but must
+      # NOT fail due to options-parsing errors.
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          version: '4.4'
+          platform: 'linuxbsd'
+          target: 'editor'
+          architecture: 'x86_64'
+          options: 'debug_symbols=yes, optimize=speed'
+          timeout: '1'
+
+      # If the action failed with "Unknown option" or similar parse error,
+      # the outcome would be failure AND the error message would mention
+      # the option. We can't easily inspect the error message here, but we
+      # can at least verify the action did not fail immediately (it would
+      # fail at validation before any network call if options were invalid).
+      # A failure here due to network/build is acceptable; a failure due to
+      # option parsing is not — but both show as "failure". So we assert
+      # that the directory output was set, which only happens after successful
+      # validation.
+      - name: Assert directory output was set (validation passed)
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          if [ -z "$DIR_OUTPUT" ]; then
+            echo "FAIL: directory output was not set — action likely failed during validation"
+            exit 1
+          fi
+          echo "PASS: directory output is set ('$DIR_OUTPUT'), confirming options were parsed successfully"

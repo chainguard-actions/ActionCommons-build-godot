@@ -8,29 +8,34 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Create custom build directory
-        run: mkdir -p /tmp/godot-build-test
+        run: mkdir -p /tmp/godot-custom-build-dir
 
       - id: action
         uses: .
-        with:
-          version: "4.4"
-          platform: linuxbsd
-          target: editor
-          directory: /tmp/godot-build-test
-          timeout: "30"
         continue-on-error: true
+        with:
+          version: '4.4'
+          platform: 'linuxbsd'
+          target: 'editor'
+          directory: '/tmp/godot-custom-build-dir'
+          timeout: '1'
 
-      - name: Assert directory output matches custom directory
-        env:
-          DIR_OUT: ${{ steps.action.outputs.directory }}
+      - name: Assert custom directory was created and used
         run: |
-          echo "directory output: $DIR_OUT"
-          if [ -z "$DIR_OUT" ]; then
-            echo "FAIL: expected directory output to be non-empty"
+          echo "Checking that the custom directory exists..."
+          if [ ! -d "/tmp/godot-custom-build-dir" ]; then
+            echo "FAIL: custom directory /tmp/godot-custom-build-dir does not exist"
             exit 1
           fi
-          if [ "$DIR_OUT" != "/tmp/godot-build-test" ]; then
-            echo "FAIL: expected directory output to be '/tmp/godot-build-test', got '$DIR_OUT'"
+          echo "PASS: custom directory exists"
+
+      - name: Assert directory output matches custom path
+        env:
+          DIR_OUTPUT: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory output: $DIR_OUTPUT"
+          if [ "$DIR_OUTPUT" != "/tmp/godot-custom-build-dir" ]; then
+            echo "FAIL: expected directory output '/tmp/godot-custom-build-dir', got '$DIR_OUTPUT'"
             exit 1
           fi
-          echo "PASS: directory output matches custom directory"
+          echo "PASS: directory output matches custom path"

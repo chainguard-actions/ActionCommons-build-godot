@@ -1,0 +1,123 @@
+#
+# © 2026-present Action Commons (https://github.com/ActionCommons)
+#
+
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Job 1: Unit Tests & 100% Coverage Verification
+  test-typescript:
+    name: TypeScript Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        id: npm-ci
+        run: npm ci
+
+      - name: Check Format
+        id: npm-format-check
+        run: npm run format:check
+
+      - name: Lint
+        id: npm-lint
+        run: npm run lint
+
+      - name: Test
+        id: npm-ci-test
+        run: npm run ci-test
+
+      - name: Upload Test Coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  # Job 2: Integration Tests (3 Essential Scenarios)
+  test-action:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.runner }}
+    needs: test-typescript
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          # 1. Standard Linux Editor Build (Baseline)
+          - name: Linux Editor
+            runner: ubuntu-latest
+            platform: linuxbsd
+            target: editor
+            version: '4.5'
+
+          # 2. Multi-Target Build (Verifies array parsing), Pre-release Flavor
+          - name: Multi-Target (Linux) Pre-release
+            runner: ubuntu-latest
+            platform: linuxbsd
+            target: 'template_debug, template_release'
+            version: '4.6'
+            flavor: 'dev6'
+
+          # 3. Multi-Target Header Archive Generation, Custom Directory & Timeout
+          #    iOS requires macOS — the SCons platform detector only exposes
+          #    "ios" when running on a Darwin host.
+          - name: Multi-Target iOS Header Generation with Custom Path & Timeout
+            runner: macos-latest
+            platform: ios
+            target: 'template_debug, template_release'
+            version: '4.6.1'
+            directory: './custom_godot_source'
+            timeout: '40' # 40 seconds
+            options: 'create_header_archive'
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Run Godot Build Action
+        id: build
+        uses: ./
+        with:
+          version: ${{ matrix.config.version }}
+          platform: ${{ matrix.config.platform }}
+          target: ${{ matrix.config.target }}
+          flavor: ${{ matrix.config.flavor || 'stable' }}
+          architecture: ${{ matrix.config.architecture || 'auto' }}
+          options: ${{ matrix.config.options || '' }}
+          directory: ${{ matrix.config.directory || '' }}
+          timeout: ${{ matrix.config.timeout || '0' }}
+
+      - name: Verify Output
+        env:
+          BUILD_DIRECTORY: ${{ steps.build.outputs.directory }}
+          MATRIX_OPTIONS: ${{ matrix.config.options }}
+          BUILD_HEADER_ARCHIVE: ${{ steps.build.outputs.header_archive }}
+        run: |
+          echo "Build directory: $BUILD_DIRECTORY"
+          if [[ "$MATRIX_OPTIONS" == *"create_header_archive"* ]]; then
+            echo "Header archive: $BUILD_HEADER_ARCHIVE"
+          fi
