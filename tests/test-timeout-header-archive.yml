@@ -1,0 +1,70 @@
+name: Test build with short timeout produces header archive
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure pip3 supports --break-system-packages and scons is on PATH
+        run: |
+          SUDO=""
+          if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+          if ! command -v pip3 >/dev/null 2>&1; then
+            $SUDO apt-get update -qq
+            $SUDO apt-get install -y -qq python3-pip
+          fi
+          if ! pip3 install --help | grep -q -- --break-system-packages; then
+            python3 -m pip install --upgrade pip || $SUDO python3 -m pip install --upgrade pip
+          fi
+          pip3 --version
+          pip3 install --quiet --break-system-packages scons
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          version: "4.4"
+          platform: linuxbsd
+          target: template_release
+          timeout: "1"
+          options: create_header_archive
+      - name: Assert directory output and extracted source
+        env:
+          DIRECTORY: ${{ steps.action.outputs.directory }}
+        run: |
+          echo "directory: $DIRECTORY"
+          case "$DIRECTORY" in
+            /*) ;;
+            *) echo "FAIL: directory output should be an absolute path"; exit 1 ;;
+          esac
+          if [ ! -f "$DIRECTORY/godot-4.4-stable/SConstruct" ]; then
+            echo "FAIL: expected extracted source at $DIRECTORY/godot-4.4-stable"
+            ls -la "$DIRECTORY" || true
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert header archive was created and contains headers
+        env:
+          ARCHIVE: ${{ steps.action.outputs.header_archive }}
+        run: |
+          echo "header_archive: $ARCHIVE"
+          if [ -z "$ARCHIVE" ] || [ ! -f "$ARCHIVE" ]; then
+            echo "FAIL: header archive not found"
+            exit 1
+          fi
+          python3 - "$ARCHIVE" <<'EOF'
+          import sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1])
+          names = z.namelist()
+          print(f"entries: {len(names)}")
+          exts = ('.glsl', '.h', '.hh', '.hpp', '.inc', '.inl')
+          bad = [n for n in names if not n.endswith('/') and not n.endswith(exts)]
+          if not names:
+              print("FAIL: archive is empty"); sys.exit(1)
+          if bad:
+              print(f"FAIL: non-header entries found: {bad[:10]}"); sys.exit(1)
+          if not any(n.replace('\\', '/').endswith('core/object/object.h') for n in names):
+              print("FAIL: expected core/object/object.h in archive"); sys.exit(1)
+          print("PASS")
+          EOF

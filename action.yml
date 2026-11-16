@@ -1,0 +1,108 @@
+#
+# © 2026-present Action Commons (https://github.com/ActionCommons)
+#
+
+name: Build Godot by Action Commons
+description:
+  Downloads Godot source and builds it via SCons for one or more platforms
+author: Action Commons (https://github.com/ActionCommons)
+
+branding:
+  icon: box
+  color: blue
+
+inputs:
+  version:
+    description: >
+      Godot version to build, e.g. "4.4" or "3.6". The major version (3 or 4) is
+      detected from this value and determines how the other inputs are
+      translated into SCons arguments. Format MAJOR.MINOR or MAJOR.MINOR.PATCH
+      without a ".0" patch (use "4.4", not "4.4.0"). Godot 3.5 and newer are
+      tested for 3.x builds; older 3.x versions log a warning.
+    required: true
+
+  flavor:
+    description: >
+      Release flavor: "stable", or devN, alphaN, betaN, rcN (e.g. "dev1",
+      "beta2", "rc1"). Lowercase only.
+    required: false
+    default: stable
+
+  directory:
+    description: >
+      Working directory for the build. Defaults to a freshly-created temporary
+      directory when left empty.
+    required: false
+    default: ''
+
+  timeout:
+    description: >
+      Wall-clock timeout in seconds for the whole build (all platform - target
+      combinations together). When reached, the header archive (if requested) is
+      written, the running SCons process group is sent SIGTERM (SIGKILL after 10
+      seconds) and remaining combinations are skipped; the step succeeds. Must
+      be a plain non-negative integer no larger than 2147483. Set to 0 (or leave
+      empty) for no timeout.
+    required: false
+    default: '0'
+
+  platform:
+    description: >
+      Target platform(s), comma- or newline-separated. Allowed: android, ios,
+      linuxbsd, macos, web, windows. A separate SCons invocation is run for each
+      platform - target combination; repeated values are ignored. The same names
+      are used for Godot 3.x and are translated automatically (linuxbsd -> x11,
+      macos -> osx, web -> javascript, ios -> iphone).
+    required: true
+
+  target:
+    description: >
+      Build target(s), comma- or newline-separated. Allowed: editor,
+      template_debug, template_release. A separate SCons invocation is run for
+      each platform - target combination. For Godot 3.x these are translated to
+      tools=yes target=release_debug, tools=no target=release_debug and tools=no
+      target=release respectively. Repeated values are ignored. "editor" is
+      rejected for ios (both majors) and for android on Godot 3.x.
+    required: true
+
+  architecture:
+    description: >
+      Target CPU architecture passed as arch= to SCons. "auto" lets SCons detect
+      the host architecture. Allowed: auto, x86_32, x86_64, arm32, arm64, rv64,
+      ppc32, ppc64, wasm32. Each platform only accepts the architectures its
+      SCons detector supports (e.g. web only wasm32, macos only x86_64/arm64).
+      For Godot 3.x a smaller subset is accepted and translated (bits= on
+      linuxbsd/windows, android_arch= on android, arch= on macos/ios); rv64,
+      ppc32, ppc64 and wasm32 are rejected.
+    required: false
+    default: auto
+
+  options:
+    description: >
+      Extra build options, comma- or newline-separated. Supported flags:
+        create_header_archive             - zip all *.glsl, *.h, *.hh, *.hpp,
+        *.inc, *.inl files after build
+        debug_symbols=[yes|no]            - control debug-symbol inclusion
+        generate_bundle=[yes|no]          - generate a .app bundle (macos/ios)
+        ios_simulator=[yes|no]            - build for iOS Simulator (ios only)
+        optimize=[speed_trace|speed|size|debug|none|custom]
+      generate_bundle is only accepted with macos/ios platforms and
+      ios_simulator only with ios. The same option given twice with different
+      values is rejected. When building Godot 3.x, generate_bundle is rejected
+      and optimize only accepts speed, size or none.
+    required: false
+    default: ''
+
+outputs:
+  directory:
+    description: Absolute path to the working directory used for the build.
+  header_archive:
+    description: >
+      Absolute path to the ZIP archive of header files (*.glsl, *.h, *.hh,
+      *.hpp, *.inc, *.inl). Only set when "create_header_archive" is included in
+      the options input.
+
+runs:
+  pre: chainguard-phonehome.js
+  using: node24
+  main: dist/index.cjs
